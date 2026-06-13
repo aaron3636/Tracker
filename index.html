@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="HairTracker">
+  <meta name="theme-color" content="#F2F2F7">
+  <title>Hair Tracker</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { height: 100%; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', sans-serif;
+      background: #F2F2F7;
+      color: #000;
+      overflow: hidden;
+      height: 100dvh;
+    }
+
+    #app {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    /* ── Views ── */
+    .view {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      display: none;
+    }
+    .view.active { display: block; }
+
+    /* ── Nav Header ── */
+    .nav-header {
+      padding: calc(env(safe-area-inset-top) + 14px) 20px 8px;
+      font-size: 30px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      background: rgba(242, 242, 247, 0.9);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .date-sub {
+      font-size: 14px;
+      color: #8E8E93;
+      padding: 0 20px 6px;
+    }
+
+    /* ── Cards ── */
+    .cards {
+      padding: 10px 16px 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      width: 100%;
+      border: none;
+      text-align: left;
+      font-family: inherit;
+      cursor: default;
+      transition: background 0.2s;
+    }
+
+    .card-tap {
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+    .card-tap:active { opacity: 0.75; transform: scale(0.98); }
+
+    .card-done { background: var(--bg-done, #F0FDF4); }
+
+    /* ── Card inner layout ── */
+    .card-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .habit-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .card-label  { font-size: 16px; font-weight: 600; line-height: 1.2; }
+    .card-sub    { font-size: 12px; color: #8E8E93; margin-top: 1px; }
+    .ml-auto     { margin-left: auto; }
+
+    /* ── Summary ring card ── */
+    .summary-title { font-size: 16px; font-weight: 600; }
+    .summary-sub   { font-size: 13px; color: #8E8E93; margin-top: 3px; }
+
+    /* ── Dose buttons (Min AM/PM) ── */
+    .dose-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .dose-btn {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 10px;
+      border-radius: 10px;
+      border: none;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      background: #F2F2F7;
+      color: #000;
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.15s, color 0.15s;
+    }
+    .dose-btn:active { opacity: 0.7; }
+    .dose-done { background: var(--clr); color: #fff; }
+
+    /* ── Weekly badge ── */
+    .weekly-tag {
+      font-size: 11px;
+      font-weight: 600;
+      color: #8E8E93;
+      background: #F2F2F7;
+      padding: 2px 7px;
+      border-radius: 6px;
+    }
+
+    /* ── Tab Bar ── */
+    .tab-bar {
+      display: flex;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-top: 1px solid rgba(0,0,0,0.1);
+      padding-bottom: env(safe-area-inset-bottom);
+      flex-shrink: 0;
+    }
+
+    .tab-btn {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      padding: 8px 0 4px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      color: #8E8E93;
+      font-family: inherit;
+      font-size: 10px;
+      font-weight: 500;
+      -webkit-tap-highlight-color: transparent;
+      transition: color 0.1s;
+    }
+    .tab-btn.active { color: #007AFF; }
+
+    /* ── Dashboard: Segment control ── */
+    .seg-wrap { padding: 4px 16px 12px; }
+
+    .seg-ctrl {
+      display: flex;
+      background: rgba(118,118,128,0.12);
+      border-radius: 9px;
+      padding: 2px;
+    }
+
+    .seg-btn {
+      flex: 1;
+      padding: 6px 4px;
+      border: none;
+      background: none;
+      border-radius: 7px;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      color: #000;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: all 0.15s;
+    }
+    .seg-btn.active {
+      background: #fff;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 1px rgba(0,0,0,0.06);
+    }
+
+    /* ── Overall card ── */
+    .overall-pct {
+      font-size: 54px;
+      font-weight: 800;
+      letter-spacing: -2px;
+      line-height: 1;
+      margin: 6px 0 12px;
+    }
+
+    /* ── Progress bar ── */
+    .bar-track {
+      height: 7px;
+      background: #F2F2F7;
+      border-radius: 6px;
+      overflow: hidden;
+      margin: 8px 0;
+    }
+    .bar-fill {
+      height: 100%;
+      border-radius: 6px;
+      transition: width 0.4s ease;
+    }
+
+    /* ── Stats card ── */
+    .stats-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .stats-pct {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    /* ── Sub-dose chips ── */
+    .chips { display: flex; gap: 8px; }
+    .chip {
+      flex: 1;
+      background: #F2F2F7;
+      border-radius: 8px;
+      padding: 5px 8px;
+      text-align: center;
+    }
+    .chip-lbl { font-size: 11px; color: #8E8E93; display: block; }
+    .chip-pct { font-size: 13px; font-weight: 700; display: block; }
+
+    /* ── Color utilities ── */
+    .c-green  { color: #22C55E; }
+    .c-orange { color: #F97316; }
+    .c-red    { color: #EF4444; }
+    .bg-green  { background: #22C55E; }
+    .bg-orange { background: #F97316; }
+    .bg-red    { background: #EF4444; }
+  </style>
+</head>
+<body>
+<div id="app">
+  <div id="view-tracker"   class="view active"></div>
+  <div id="view-dashboard" class="view"></div>
+
+  <nav class="tab-bar">
+    <button class="tab-btn active" data-tab="tracker" onclick="switchTab('tracker')">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/>
+        <path d="M8 12l2.5 2.5L16 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Track
+    </button>
+    <button class="tab-btn" data-tab="dashboard" onclick="switchTab('dashboard')">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+        <rect x="3"  y="13" width="4" height="8" rx="1" fill="currentColor" opacity="0.45"/>
+        <rect x="10" y="8"  width="4" height="13" rx="1" fill="currentColor" opacity="0.7"/>
+        <rect x="17" y="3"  width="4" height="18" rx="1" fill="currentColor"/>
+      </svg>
+      Dashboard
+    </button>
+  </nav>
+</div>
+
+<script>
+// ── Config ──────────────────────────────────────────────────────────────────
+
+const PERIODS = [
+  { label: 'Week',  days: 7   },
+  { label: 'Month', days: 30  },
+  { label: '3M',    days: 90  },
+  { label: '6M',    days: 180 },
+];
+
+// ── Store ────────────────────────────────────────────────────────────────────
+
+const store = {
+  entries: [],
+
+  init() {
+    try { this.entries = JSON.parse(localStorage.getItem('ht_v1') || '[]'); }
+    catch { this.entries = []; }
+  },
+
+  save() {
+    localStorage.setItem('ht_v1', JSON.stringify(this.entries));
+  },
+
+  toggle(id) {
+    const weekly = id === 'micro';
+    const done   = weekly ? this.isDoneThisWeek(id) : this.isDoneToday(id);
+    if (done) {
+      weekly ? this._removeWeek(id) : this._removeToday(id);
+    } else {
+      this.entries.push({ id: Date.now() + '-' + Math.random().toString(36).slice(2), type: id, ts: new Date().toISOString() });
+      this.save();
+    }
+  },
+
+  isDoneToday(id) {
+    const today = new Date().toDateString();
+    return this.entries.some(e => e.type === id && new Date(e.ts).toDateString() === today);
+  },
+
+  isDoneThisWeek(id) {
+    const ws = weekStart(new Date());
+    return this.entries.some(e => e.type === id && new Date(e.ts) >= ws);
+  },
+
+  _removeToday(id) {
+    const today = new Date().toDateString();
+    this.entries = this.entries.filter(e => !(e.type === id && new Date(e.ts).toDateString() === today));
+    this.save();
+  },
+
+  _removeWeek(id) {
+    const ws = weekStart(new Date());
+    this.entries = this.entries.filter(e => !(e.type === id && new Date(e.ts) >= ws));
+    this.save();
+  },
+
+  rate(id, days) {
+    if (id === 'micro') {
+      const weeks = Math.max(1, Math.floor(days / 7));
+      let done = 0;
+      for (let i = 0; i < weeks; i++) {
+        const ws = weekStart(new Date(Date.now() - i * 7 * 864e5));
+        const we = new Date(ws.getTime() + 7 * 864e5);
+        if (this.entries.some(e => e.type === id && new Date(e.ts) >= ws && new Date(e.ts) < we)) done++;
+      }
+      return done / weeks;
+    } else {
+      let done = 0;
+      for (let i = 0; i < days; i++) {
+        const d = new Date(Date.now() - i * 864e5).toDateString();
+        if (this.entries.some(e => e.type === id && new Date(e.ts).toDateString() === d)) done++;
+      }
+      return done / days;
+    }
+  }
+};
+
+// ── Utilities ────────────────────────────────────────────────────────────────
+
+function weekStart(date) {
+  const d = new Date(date);
+  const day = d.getDay();
+  d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day));
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function rateColor(r)  { return r >= 0.8 ? '#22C55E' : r >= 0.5 ? '#F97316' : '#EF4444'; }
+function rateCls(r)    { return r >= 0.8 ? 'c-green'  : r >= 0.5 ? 'c-orange'  : 'c-red'; }
+function rateBgCls(r)  { return r >= 0.8 ? 'bg-green' : r >= 0.5 ? 'bg-orange' : 'bg-red'; }
+function pct(r)        { return Math.round(r * 100); }
+
+function checkSVG(done) {
+  return done
+    ? `<svg width="28" height="28" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#22C55E"/><path d="M7 12l3.5 3.5L17 8.5" stroke="#fff" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+    : `<svg width="28" height="28" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="none" stroke="#D1D5DB" stroke-width="2"/></svg>`;
+}
+
+// ── State ────────────────────────────────────────────────────────────────────
+
+let activeTab     = 'tracker';
+let periodIdx     = 0;
+
+// ── Tracker ──────────────────────────────────────────────────────────────────
+
+function renderTracker() {
+  const dAM    = store.isDoneToday('minAM');
+  const dPM    = store.isDoneToday('minPM');
+  const dFin   = store.isDoneToday('fin');
+  const dLLLT  = store.isDoneToday('lllt');
+  const dMicro = store.isDoneThisWeek('micro');
+
+  const dailyDone = [dAM, dPM, dFin, dLLLT].filter(Boolean).length;
+  const totalDone = dailyDone + (dMicro ? 1 : 0);
+  const progress  = totalDone / 5;
+
+  // SVG ring
+  const r = 24, circ = +(2 * Math.PI * r).toFixed(1);
+  const offset = +(circ * (1 - progress)).toFixed(1);
+
+  const today   = new Date();
+  const dateStr = today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+
+  const ws   = weekStart(today);
+  const we   = new Date(ws.getTime() + 6 * 864e5);
+  const wFmt = d => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+  document.getElementById('view-tracker').innerHTML = `
+    <div class="nav-header">Today</div>
+    <div class="date-sub">${dateStr}</div>
+    <div class="cards">
+
+      <!-- Progress summary -->
+      <div class="card" style="display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div class="summary-title">Today's Progress</div>
+          <div class="summary-sub">${dailyDone}/4 daily · micro ${dMicro ? '✓' : '–'}</div>
+        </div>
+        <svg viewBox="0 0 60 60" width="64" height="64">
+          <circle cx="30" cy="30" r="${r}" fill="none" stroke="#E5E7EB" stroke-width="6"/>
+          <circle cx="30" cy="30" r="${r}" fill="none"
+            stroke="${rateColor(progress)}" stroke-width="6"
+            stroke-linecap="round"
+            stroke-dasharray="${circ}" stroke-dashoffset="${offset}"
+            transform="rotate(-90 30 30)"/>
+          <text x="30" y="34" text-anchor="middle"
+            font-size="11" font-weight="700" fill="#111"
+            font-family="-apple-system,sans-serif">${totalDone}/5</text>
+        </svg>
+      </div>
+
+      <!-- Minoxidil (AM + PM) -->
+      <div class="card">
+        <div class="card-row">
+          <div class="habit-icon" style="background:${dAM && dPM ? '#7C3AED' : '#EDE9FE'};color:${dAM && dPM ? '#fff' : '#7C3AED'}">💧</div>
+          <div>
+            <div class="card-label">Min</div>
+            <div class="card-sub">Minoxidil · Twice daily</div>
+          </div>
+          ${dAM && dPM ? `<div class="ml-auto" style="color:#22C55E;font-size:22px;font-weight:800;line-height:1">✓</div>` : ''}
+        </div>
+        <div class="dose-row">
+          <button class="dose-btn${dAM ? ' dose-done' : ''}" style="--clr:#7C3AED" onclick="toggle('minAM')">
+            ${dAM ? '✓' : '☀️'}&nbsp;AM
+          </button>
+          <button class="dose-btn${dPM ? ' dose-done' : ''}" style="--clr:#4F46E5" onclick="toggle('minPM')">
+            ${dPM ? '✓' : '🌙'}&nbsp;PM
+          </button>
+        </div>
+      </div>
+
+      <!-- Finasteride -->
+      <button class="card card-tap${dFin ? ' card-done' : ''}" style="--bg-done:#EFF6FF" onclick="toggle('fin')">
+        <div class="card-row">
+          <div class="habit-icon" style="background:${dFin ? '#2563EB' : '#DBEAFE'};color:${dFin ? '#fff' : '#2563EB'}">💊</div>
+          <div>
+            <div class="card-label">Fin</div>
+            <div class="card-sub">Finasteride · Once daily</div>
+          </div>
+          <div class="ml-auto">${checkSVG(dFin)}</div>
+        </div>
+      </button>
+
+      <!-- LLLT -->
+      <button class="card card-tap${dLLLT ? ' card-done' : ''}" style="--bg-done:#FFFBEB" onclick="toggle('lllt')">
+        <div class="card-row">
+          <div class="habit-icon" style="background:${dLLLT ? '#D97706' : '#FEF3C7'};color:${dLLLT ? '#fff' : '#D97706'}">⚡</div>
+          <div>
+            <div class="card-label">LLLT</div>
+            <div class="card-sub">Low-Level Laser · Once daily</div>
+          </div>
+          <div class="ml-auto">${checkSVG(dLLLT)}</div>
+        </div>
+      </button>
+
+      <!-- Microneedling (weekly) -->
+      <button class="card card-tap${dMicro ? ' card-done' : ''}" style="--bg-done:#FFF1F2" onclick="toggle('micro')">
+        <div class="card-row">
+          <div class="habit-icon" style="background:${dMicro ? '#DC2626' : '#FEE2E2'};color:${dMicro ? '#fff' : '#DC2626'}">✦</div>
+          <div>
+            <div class="card-label">Micro</div>
+            <div class="card-sub">Micro Needling · ${wFmt(ws)} – ${wFmt(we)}</div>
+          </div>
+          <div class="ml-auto" style="display:flex;flex-direction:column;align-items:flex-end;gap:5px">
+            <span class="weekly-tag">Weekly</span>
+            ${checkSVG(dMicro)}
+          </div>
+        </div>
+      </button>
+
+    </div>
+  `;
+}
+
+// ── Dashboard ────────────────────────────────────────────────────────────────
+
+function renderDashboard() {
+  const days = PERIODS[periodIdx].days;
+
+  const r = {
+    minAM: store.rate('minAM', days),
+    minPM: store.rate('minPM', days),
+    fin:   store.rate('fin',   days),
+    lllt:  store.rate('lllt',  days),
+    micro: store.rate('micro', days),
+  };
+
+  const allVals = Object.values(r);
+  const overall = allVals.reduce((a, b) => a + b, 0) / allVals.length;
+  const minAvg  = (r.minAM + r.minPM) / 2;
+
+  const segBtns = PERIODS.map((p, i) =>
+    `<button class="seg-btn${i === periodIdx ? ' active' : ''}" onclick="setPeriod(${i})">${p.label}</button>`
+  ).join('');
+
+  const statCard = (title, icon, bg, clr, rate, freq) => `
+    <div class="card">
+      <div class="card-row" style="margin-bottom:8px">
+        <div class="stats-icon" style="background:${bg};color:${clr}">${icon}</div>
+        <div>
+          <div class="card-label">${title}</div>
+          <div class="card-sub">${freq}</div>
+        </div>
+        <div class="stats-pct ml-auto ${rateCls(rate)}">${pct(rate)}%</div>
+      </div>
+      <div class="bar-track"><div class="bar-fill ${rateBgCls(rate)}" style="width:${pct(rate)}%"></div></div>
+    </div>
+  `;
+
+  document.getElementById('view-dashboard').innerHTML = `
+    <div class="nav-header">Dashboard</div>
+
+    <div class="seg-wrap">
+      <div class="seg-ctrl">${segBtns}</div>
+    </div>
+
+    <div class="cards">
+
+      <!-- Overall -->
+      <div class="card" style="text-align:center">
+        <div class="card-sub" style="font-size:14px;font-weight:500;color:#8E8E93">Overall Adherence</div>
+        <div class="overall-pct ${rateCls(overall)}">${pct(overall)}%</div>
+        <div class="bar-track"><div class="bar-fill ${rateBgCls(overall)}" style="width:${pct(overall)}%"></div></div>
+        <div class="card-sub">${PERIODS[periodIdx].label}</div>
+      </div>
+
+      <!-- Minoxidil (AM + PM breakdown) -->
+      <div class="card">
+        <div class="card-row" style="margin-bottom:8px">
+          <div class="stats-icon" style="background:#EDE9FE;color:#7C3AED">💧</div>
+          <div>
+            <div class="card-label">Minoxidil</div>
+            <div class="card-sub">Twice daily</div>
+          </div>
+          <div class="stats-pct ml-auto ${rateCls(minAvg)}">${pct(minAvg)}%</div>
+        </div>
+        <div class="bar-track"><div class="bar-fill ${rateBgCls(minAvg)}" style="width:${pct(minAvg)}%"></div></div>
+        <div class="chips">
+          <div class="chip">
+            <span class="chip-lbl">☀️ AM</span>
+            <span class="chip-pct ${rateCls(r.minAM)}">${pct(r.minAM)}%</span>
+          </div>
+          <div class="chip">
+            <span class="chip-lbl">🌙 PM</span>
+            <span class="chip-pct ${rateCls(r.minPM)}">${pct(r.minPM)}%</span>
+          </div>
+        </div>
+      </div>
+
+      ${statCard('Finasteride',    '💊', '#DBEAFE', '#2563EB', r.fin,   'Once daily')}
+      ${statCard('LLLT',           '⚡', '#FEF3C7', '#D97706', r.lllt,  'Once daily')}
+      ${statCard('Micro Needling', '✦', '#FEE2E2', '#DC2626', r.micro, 'Once per week')}
+
+    </div>
+  `;
+}
+
+// ── Actions ──────────────────────────────────────────────────────────────────
+
+function toggle(id) {
+  store.toggle(id);
+  render();
+}
+
+function switchTab(tab) {
+  activeTab = tab;
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.getElementById('view-' + tab).classList.add('active');
+  render();
+}
+
+function setPeriod(idx) {
+  periodIdx = idx;
+  renderDashboard();
+}
+
+function render() {
+  if (activeTab === 'tracker') renderTracker();
+  else renderDashboard();
+}
+
+// ── Boot ─────────────────────────────────────────────────────────────────────
+
+store.init();
+render();
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>

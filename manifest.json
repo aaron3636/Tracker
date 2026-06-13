@@ -1,0 +1,10 @@
+{
+  "name": "Hair Tracker",
+  "short_name": "HairTracker",
+  "description": "Track your hair loss treatment routine",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#F2F2F7",
+  "theme_color": "#F2F2F7",
+  "orientation": "portrait"
+}
