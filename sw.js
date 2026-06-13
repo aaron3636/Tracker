@@ -1,4 +1,4 @@
-const CACHE = 'hair-tracker-v2';
+const CACHE = 'hair-tracker-v3';
 const ASSETS = ['./index.html', './manifest.json'];
 
 self.addEventListener('install', e => {

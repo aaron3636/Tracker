@@ -628,6 +628,15 @@ function renderDashboard() {
 
       ${buildCalendar(days)}
 
+      <button onclick="exportCSV()" style="
+        width:100%; padding:14px; border:none; border-radius:16px;
+        background:#fff; font-family:inherit; font-size:15px; font-weight:600;
+        color:#007AFF; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.06);
+        -webkit-tap-highlight-color:transparent;
+      ">
+        ↓ Export CSV
+      </button>
+
     </div>
   `;
 }
@@ -733,6 +742,60 @@ function buildCalendar(days) {
       ${scrollHint}
     </div>
   `;
+}
+
+// ── Export ───────────────────────────────────────────────────────────────────
+
+function exportCSV() {
+  if (store.entries.length === 0) {
+    alert('No data to export yet.');
+    return;
+  }
+
+  const habits = [
+    { id: 'minAM', label: 'MIN AM' },
+    { id: 'minPM', label: 'MIN PM' },
+    { id: 'fin',   label: 'FIN'    },
+    { id: 'lllt',  label: 'LLLT'   },
+    { id: 'micro', label: 'Pinch'  },
+  ];
+
+  const done = {};
+  for (const h of habits) {
+    done[h.id] = new Set(
+      store.entries.filter(e => e.type === h.id).map(e => new Date(e.ts).toDateString())
+    );
+  }
+
+  const earliest = store.entries.reduce((min, e) => {
+    const d = new Date(e.ts);
+    return d < min ? d : min;
+  }, new Date());
+
+  const rows = [['Date', ...habits.map(h => h.label)]];
+
+  const cur = new Date(earliest);
+  cur.setHours(0, 0, 0, 0);
+  const today = new Date();
+  today.setHours(23, 59, 59, 999);
+
+  while (cur <= today) {
+    const dateStr = cur.toDateString();
+    const iso     = cur.toISOString().slice(0, 10);
+    rows.push([iso, ...habits.map(h => done[h.id].has(dateStr) ? '1' : '')]);
+    cur.setDate(cur.getDate() + 1);
+  }
+
+  const csv  = rows.map(r => r.join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `hair-tracker-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 // ── Actions ──────────────────────────────────────────────────────────────────
