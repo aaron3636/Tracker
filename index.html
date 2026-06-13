@@ -433,7 +433,7 @@ function renderTracker() {
       <div class="card" style="display:flex;align-items:center;justify-content:space-between">
         <div>
           <div class="summary-title">Today's Progress</div>
-          <div class="summary-sub">${dailyDone}/4 daily · micro ${dMicro ? '✓' : '–'}</div>
+          <div class="summary-sub">${dailyDone}/4 daily · pinch ${dMicro ? '✓' : '–'}</div>
         </div>
         <svg viewBox="0 0 60 60" width="64" height="64">
           <circle cx="30" cy="30" r="${r}" fill="none" stroke="#E5E7EB" stroke-width="6"/>
@@ -453,7 +453,7 @@ function renderTracker() {
         <div class="card-row">
           <div class="habit-icon" style="background:${dAM && dPM ? '#7C3AED' : '#EDE9FE'};color:${dAM && dPM ? '#fff' : '#7C3AED'}">💧</div>
           <div>
-            <div class="card-label">Min</div>
+            <div class="card-label">MIN</div>
             <div class="card-sub">Minoxidil · Twice daily</div>
           </div>
           ${dAM && dPM ? `<div class="ml-auto" style="color:#22C55E;font-size:22px;font-weight:800;line-height:1">✓</div>` : ''}
@@ -473,7 +473,7 @@ function renderTracker() {
         <div class="card-row">
           <div class="habit-icon" style="background:${dFin ? '#2563EB' : '#DBEAFE'};color:${dFin ? '#fff' : '#2563EB'}">💊</div>
           <div>
-            <div class="card-label">Fin</div>
+            <div class="card-label">FIN</div>
             <div class="card-sub">Finasteride · Once daily</div>
           </div>
           <div class="ml-auto">${checkSVG(dFin)}</div>
@@ -497,7 +497,7 @@ function renderTracker() {
         <div class="card-row">
           <div class="habit-icon" style="background:${dMicro ? '#DC2626' : '#FEE2E2'};color:${dMicro ? '#fff' : '#DC2626'}">✦</div>
           <div>
-            <div class="card-label">Micro</div>
+            <div class="card-label">Pinch</div>
             <div class="card-sub">Micro Needling · ${wFmt(ws)} – ${wFmt(we)}</div>
           </div>
           <div class="ml-auto" style="display:flex;flex-direction:column;align-items:flex-end;gap:5px">
@@ -568,7 +568,7 @@ function renderDashboard() {
         <div class="card-row" style="margin-bottom:8px">
           <div class="stats-icon" style="background:#EDE9FE;color:#7C3AED">💧</div>
           <div>
-            <div class="card-label">Minoxidil</div>
+            <div class="card-label">MIN</div>
             <div class="card-sub">Twice daily</div>
           </div>
           <div class="stats-pct ml-auto ${rateCls(minAvg)}">${pct(minAvg)}%</div>
@@ -586,9 +586,9 @@ function renderDashboard() {
         </div>
       </div>
 
-      ${statCard('Finasteride',    '💊', '#DBEAFE', '#2563EB', r.fin,   'Once daily')}
+      ${statCard('FIN',            '💊', '#DBEAFE', '#2563EB', r.fin,   'Once daily')}
       ${statCard('LLLT',           '⚡', '#FEF3C7', '#D97706', r.lllt,  'Once daily')}
-      ${statCard('Micro Needling', '✦', '#FEE2E2', '#DC2626', r.micro, 'Once per week')}
+      ${statCard('Pinch',          '✦', '#FEE2E2', '#DC2626', r.micro, 'Once per week')}
 
     </div>
   `;
