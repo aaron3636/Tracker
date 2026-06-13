@@ -270,6 +270,42 @@
     .bg-green  { background: #22C55E; }
     .bg-orange { background: #F97316; }
     .bg-red    { background: #EF4444; }
+
+    /* ── Calendar grid ── */
+    .cal-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .cal-table  { border-collapse: collapse; min-width: max-content; }
+
+    .cal-name {
+      position: sticky;
+      left: 0;
+      background: #fff;
+      z-index: 2;
+      padding-right: 10px;
+      font-weight: 600;
+      white-space: nowrap;
+      color: #3C3C43;
+    }
+
+    .cal-head-cell { text-align: center; vertical-align: bottom; padding: 0 1px 5px; }
+    .cal-head-top  { font-size: 8px;  color: #8E8E93; line-height: 1.3; display: block; }
+    .cal-head-bot  { font-size: 10px; font-weight: 600; color: #3C3C43; line-height: 1.2; display: block; }
+    .cal-head-bot.today-lbl { color: #007AFF; }
+
+    .cal-cell  { text-align: center; padding: 1px; }
+    .cal-dot   { border-radius: 50%; margin: auto; background: #EBEBF0; }
+    .cal-done  { background: var(--c) !important; }
+    .cal-today { box-shadow: 0 0 0 1.5px var(--c, #007AFF); }
+
+    .cal-week-sep td:not(.cal-name),
+    .cal-week-sep th:not(.cal-name) { border-left: 1px solid rgba(0,0,0,0.07); }
+
+    .cal-month-header td {
+      padding: 8px 0 2px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #007AFF;
+      text-align: left;
+    }
   </style>
 </head>
 <body>
@@ -590,6 +626,111 @@ function renderDashboard() {
       ${statCard('LLLT',           '⚡', '#FEF3C7', '#D97706', r.lllt,  'Once daily')}
       ${statCard('Pinch',          '✦', '#FEE2E2', '#DC2626', r.micro, 'Once per week')}
 
+      ${buildCalendar(days)}
+
+    </div>
+  `;
+}
+
+// ── Calendar ─────────────────────────────────────────────────────────────────
+
+function buildCalendar(days) {
+  const habits = [
+    { id: 'minAM', label: 'MIN AM', color: '#7C3AED' },
+    { id: 'minPM', label: 'MIN PM', color: '#4F46E5' },
+    { id: 'fin',   label: 'FIN',    color: '#2563EB' },
+    { id: 'lllt',  label: 'LLLT',   color: '#D97706' },
+    { id: 'micro', label: 'Pinch',  color: '#DC2626' },
+  ];
+
+  // Dates oldest → newest
+  const dates = Array.from({ length: days }, (_, i) =>
+    new Date(Date.now() - (days - 1 - i) * 864e5)
+  );
+
+  const todayStr = new Date().toDateString();
+  const DAY  = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+  const MON  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  // Cell size by period length
+  const sz = days <= 7 ? 22 : days <= 30 ? 15 : days <= 90 ? 11 : 9;
+  const nameFz = days > 30 ? 11 : 12;
+
+  // Pre-build done-sets per habit for fast lookup
+  const done = {};
+  for (const h of habits) {
+    done[h.id] = new Set(store.entries.filter(e => e.type === h.id).map(e => new Date(e.ts).toDateString()));
+  }
+
+  // ── Header row ──
+  let headCells = `<th class="cal-name" style="font-size:${nameFz}px"></th>`;
+  let lastMonth = -1;
+
+  for (let i = 0; i < dates.length; i++) {
+    const d   = dates[i];
+    const mon = d.getMonth();
+    const isNewWeek  = i > 0 && d.getDay() === 1;
+    const isNewMonth = mon !== lastMonth;
+    const isToday    = d.toDateString() === todayStr;
+    lastMonth = mon;
+
+    let top = '', bot = '';
+    if (days <= 7) {
+      top = DAY[d.getDay()];
+      bot = d.getDate();
+    } else if (days <= 30) {
+      top = DAY[d.getDay()];
+      bot = d.getDate();
+    } else {
+      // For 3M/6M: show month name at month boundary, date every 5 days
+      top = isNewMonth ? MON[mon] : (d.getDate() % 7 === 1 ? d.getDate() : '');
+      bot = '';
+    }
+
+    const botCls = isToday ? 'cal-head-bot today-lbl' : 'cal-head-bot';
+    headCells += `
+      <th class="cal-head-cell" style="min-width:${sz + 4}px${isNewWeek ? ';border-left:1px solid rgba(0,0,0,0.07)' : ''}">
+        <span class="cal-head-top">${top}</span>
+        <span class="${botCls}">${bot}</span>
+      </th>`;
+  }
+
+  // ── Habit rows ──
+  let rows = '';
+  for (const h of habits) {
+    let cells = `<td class="cal-name" style="font-size:${nameFz}px">${h.label}</td>`;
+    for (let i = 0; i < dates.length; i++) {
+      const d       = dates[i];
+      const isDone  = done[h.id].has(d.toDateString());
+      const isToday = d.toDateString() === todayStr;
+      const isSep   = i > 0 && d.getDay() === 1;
+
+      const dotCls = ['cal-dot', isDone ? 'cal-done' : '', isToday && !isDone ? 'cal-today' : ''].filter(Boolean).join(' ');
+      const extra  = isDone ? '' : isToday ? `box-shadow:0 0 0 1.5px ${h.color}` : '';
+
+      cells += `<td class="cal-cell" style="${isSep ? 'border-left:1px solid rgba(0,0,0,0.07)' : ''}">
+        <div class="${dotCls}" style="width:${sz}px;height:${sz}px;--c:${h.color};${extra}"></div>
+      </td>`;
+    }
+    rows += `<tr>${cells}</tr>`;
+  }
+
+  const scrollHint = days > 7
+    ? `<div style="font-size:11px;color:#8E8E93;margin-top:6px;text-align:center">← swipe to scroll →</div>`
+    : '';
+
+  return `
+    <div class="card" style="padding:14px 0 10px">
+      <div style="padding:0 16px 10px">
+        <div class="card-label">Calendar</div>
+      </div>
+      <div class="cal-scroll" style="padding:0 16px">
+        <table class="cal-table">
+          <thead><tr>${headCells}</tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+      ${scrollHint}
     </div>
   `;
 }
